@@ -28,6 +28,7 @@ type Args struct {
 	WorkloadKind      string
 	WorkloadName      string
 	WorkloadNamespace string
+	Header            string
 
 	Port int32
 
@@ -103,6 +104,9 @@ func Main(ctx context.Context, argStrs ...string) error {
 	cmd.Flags().Int32Var(&args.Port, "port", 8080,
 		"Workload port to forward to")
 
+	cmd.Flags().StringVar(&args.Header, "header", "auto",
+		"Intercept header")
+
 	args.PreviewSpec.Ingress = &rpc_manager.IngressInfo{}
 	cmd.Flags().StringVar(&args.PreviewSpec.Ingress.Host, "ingress-host", "",
 		"L3 hostname (IP address or DNS name) of the relevant ingress")
@@ -173,15 +177,17 @@ func main(ctx context.Context, args *Args) error {
 		dlog.Infof(ctx, "Creating intercept...")
 		iResp, err := userdCoreImpl.CreateIntercept(ctx, &rpc_userd.CreateInterceptRequest{
 			Spec: &rpc_manager.InterceptSpec{
-				Name:         args.WorkloadName,
-				Client:       "", // empty for CreateInterceptRequest
-				Agent:        args.WorkloadName,
-				WorkloadKind: args.WorkloadKind,
-				Namespace:    args.WorkloadNamespace,
-				Mechanism:    "http",
-				TargetHost:   "127.0.0.1",
-				TargetPort:   args.Port,
-				ServiceName:  args.WorkloadName,
+				Name:          args.WorkloadName,
+				Client:        "", // empty for CreateInterceptRequest
+				Agent:         args.WorkloadName,
+				WorkloadKind:  args.WorkloadKind,
+				Namespace:     args.WorkloadNamespace,
+				Mechanism:     "http",
+				MechanismArgs: []string{"header=" + args.Header},
+
+				TargetHost:  "127.0.0.1",
+				TargetPort:  args.Port,
+				ServiceName: args.WorkloadName,
 			},
 			MountPoint:  "", // we're not mounting things
 			AgentImage:  "", // if we leave this empty, then the traffic-manager will choose a good default for us
